@@ -1,13 +1,12 @@
 import pygame
 import random
 
-# Initialize Pygame
 pygame.init()
 
 # Initialize the mixer for sound
 pygame.mixer.init()
 
-# Load and initialize the MP3 sound
+# Load and laser sfx
 laser_sound = pygame.mixer.Sound("laser_shot.mp3")  # Replace with your actual sound file
 
 # Screen setup
@@ -21,7 +20,7 @@ spaceX = 300
 spaceY = 450
 space_speed = 1  # Movement speed
 
-# Load and scale alien image
+# Load alien image
 playerIng = pygame.image.load("alien.png")
 playerIng = pygame.transform.scale(playerIng, (50, 50))
 
@@ -71,11 +70,11 @@ class Bullet:
         return bullet_rect.colliderect(alien_rect)  # Check if they collide
 
 def shoot_bullet():
-    laser_sound.play()  # Play the laser sound effect when shooting
+    laser_sound.play()  # laser sfx play
     bullet = Bullet(spaceX + 22, spaceY)  # Spawn bullet from spaceship
     bullets.append(bullet)
 
-# Function to display the game over message
+# game over message
 def display_game_over():
     font = pygame.font.Font(None, 74)
     text = font.render("GAME OVER", True, (255, 0, 0))
@@ -83,7 +82,7 @@ def display_game_over():
 
 # Game loop
 running = True
-spacebar_pressed = False  # Track whether spacebar is pressed
+spacebar_pressed = False  # spacebar is pressed
 while running:
     screen.fill((0, 0, 0))
 
@@ -91,7 +90,7 @@ while running:
         if event.type == pygame.QUIT:
             running = False
 
-    # If game over, stop game loop
+    # ends loop if game over
     if lives <= 0:
         display_game_over()
         pygame.display.update()
@@ -106,7 +105,7 @@ while running:
     if keys[pygame.K_d] and spaceX < 750:
         spaceX += space_speed
 
-    # Shoot bullet only when spacebar is pressed and not being held down
+    # shoot of spacebar is pressed to prevent a beam and not bullets
     if keys[pygame.K_SPACE]:
         if not spacebar_pressed:  # Only shoot if spacebar was not previously pressed
             shoot_bullet()
@@ -131,8 +130,9 @@ while running:
                 aliens.remove(alien)
                 bullets.remove(bullet)
 
-                # Spawn a random number of new aliens (between 0 and 3), ensuring we don't exceed the cap
-                num_new_aliens = random.randint(0, 2)  # Spawn between 0 and 3 new aliens
+                # Spawn a random number of new aliens
+
+                num_new_aliens = random.randint(0, 2)  # Spawn aliens after they die
                 spawn_aliens(num_new_aliens)
                 break  # Exit loop once collision is detected
 
