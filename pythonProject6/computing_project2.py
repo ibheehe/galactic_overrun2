@@ -10,10 +10,10 @@ pygame.mixer.init()
 # Initialize the mixer for sound
 pygame.mixer.init()
 
-# Load and play background music on a loop
-pygame.mixer.music.load("background_music.mp3")  # Replace with your actual music file
-pygame.mixer.music.set_volume(0.5)  # Adjust volume (0.0 to 1.0)
-pygame.mixer.music.play(-1)  # -1 makes it loop indefinitely
+# BGM loop
+# pygame.mixer.music.load("background_music.mp3")  # Replace with your actual music file
+# pygame.mixer.music.set_volume(0.5)  # Adjust volume (0.0 to 1.0)
+# pygame.mixer.music.play(-1)  # -1 makes it loop indefinitely
 
 
 # Load and laser sfx
