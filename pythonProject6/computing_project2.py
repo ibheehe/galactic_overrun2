@@ -28,7 +28,7 @@ explosion_img = pygame.transform.scale(explosion_img, (50,50))
 screen = pygame.display.set_mode((800, 600))
 pygame.display.set_caption("Galactic Overrun")
 
-# Adding a var to store the highest score
+
 high_score = 0
 
 # Loading the score from a txt file (if not found, just start from 0)
@@ -37,6 +37,12 @@ try:
         high_score = int(file.read())
 except FileNotFoundError:
     high_score = 0
+
+
+#needed to declare lives because game was crashing
+def alien_reached_bottom():
+    global lives
+    lives -= 1
 
 # Loading and scaling spaceship image
 spaceIng = pygame.image.load("Spaceship.png")
@@ -51,9 +57,10 @@ playerIng = pygame.transform.scale(playerIng, (50, 50))
 
 # Enemy setup
 aliens = []
-max_aliens = 30  # Cap of maximum aliens allowed at a time
-lives = 5  # Starting lives
-alien_hit_count = 0  # Count of aliens that have reached the bottom
+zigzag_aliens = []  # zig zag alien list
+max_aliens = 30  # Cap of max aliens
+lives = 5  # llife counter
+alien_hit_count = 0
 
 # Alien bullet setup
 alien_bullets = []
@@ -61,7 +68,7 @@ alien_bullet_speed = 3
 
 # Adding a scoring screen
 score = 0
-font = pygame.font.Font(None, 36) # Default font, size 36
+font = pygame.font.Font(None, 36)
 
 # Adding Power Ups variables
 powerups = []
@@ -89,18 +96,76 @@ last_frame_update = pygame.time.get_ticks()
 def spawn_aliens(num_aliens):
     current_aliens = len(aliens)
     available_space = max_aliens - current_aliens
-    num_aliens_to_spawn = min(num_aliens, available_space)  # Ensure we don't exceed the cap
+    num_aliens_to_spawn = min(num_aliens, available_space)  # cap limit
 
     for _ in range(num_aliens_to_spawn):
-        alienX = random.randint(50, 750)  # Random X position
-        alienY = random.randint(20, 100)  # Random Y start position
-        alien_speed = random.uniform(0.1, 0.1)  # Random speed for variation, changed to set speed
-        shoot_timer = random.randint(60, 180)  # Random shooting interval (1-3 seconds)
-        aliens.append([alienX, alienY, alien_speed, shoot_timer])  # Add new alien with timer
+        alienX = random.randint(50, 750)
+        alienY = random.randint(20, 100)
+        alien_speed = random.uniform(0.1, 0.1)  # speed
+        shoot_timer = random.randint(60, 180)  # Random shooting interval  (doesnt work and crashes the code if removed)
+        if random.random() < 0.3:  # 30% chance to spawn a zig-zag alien
+            zigzag_aliens.append([alienX, alienY, alien_speed, random.choice([-1, 1]), 0])
+        else:
+            aliens.append([alienX, alienY, alien_speed, shoot_timer])  # Normal alien with shoot timer
+
 
 def draw_aliens():
-    for alien in aliens:
-        screen.blit(playerIng, (alien[0], alien[1]))
+    global alien_hit_count
+    # Drawing zigzag aliens
+    for zigzag in zigzag_aliens[:]:
+        zigzag[1] += zigzag[2]  # Move down
+        zigzag[4] += 1  # Frame counter
+
+        # Move left and right
+        if zigzag[4] % 100 == 0:
+            zigzag[3] *= -1  # Change direction
+
+        # Update horizontal movement
+        zigzag[0] += zigzag[3]  # speed for zig zag
+
+        #  zigzag alien doesn't move off-screen so it keeps bouncing
+        if zigzag[0] < 0:
+            zigzag[0] = 0  # Prevent moving off the left side
+            zigzag[3] *= -1
+        elif zigzag[0] > 750:
+            zigzag[0] = 750  # Prevent moving off the right side
+            zigzag[3] *= -1
+
+        # Alien shooting logic
+        zigzag[4] -= 1  # Decrease shoot timer
+        if zigzag[4] <= 0:  # Time to shoot
+            alien_bullets.append(AlienBullet(zigzag[0] + 22, zigzag[1] + 50))  # Add bullet from zigzag alien
+            zigzag[4] = random.randint(60, 180)  # Reset shooting interval with a random timer
+
+        # Remove if off-screen
+        if zigzag[1] > 600:
+            zigzag_aliens.remove(zigzag)
+
+        # Draw the zigzag alien
+        screen.blit(playerIng, (zigzag[0], zigzag[1]))  # Drawing the zigzag alien
+
+    # Drawing regular aliens
+    for alien in aliens[:]:
+        alien[1] += alien[2]  # Move down
+
+        # Alien shooting logic
+        alien[3] -= 1  # Decrease the shoot timer
+        if alien[3] <= 1:
+            alien_bullets.append(AlienBullet(alien[0] + 22, alien[1] + 50))  # Add bullet from regular alien
+            alien[3] = int(1000)  # Reset shooting interval (set speed for regular aliens)
+
+        # Draw the regular alien
+        screen.blit(playerIng, (alien[0], alien[1]))  # Drawing the regular alien
+
+        # Check if the alien moved off-screen
+        if alien[1] > 600:
+            aliens.remove(alien)
+            spawn_aliens(random.randint(0, 2))  # Spawn new aliens
+            alien_hit_count += 1  # Increment the global alien_hit_count
+            if alien_hit_count >= 5:
+                lives -= 1
+                alien_hit_count = 0
+
 
 # Bullet setup
 bullet_speed = 7
@@ -125,6 +190,8 @@ class Bullet:
         alien_rect = pygame.Rect(alien[0], alien[1], 50, 50)  # Alien rectangle
         bullet_rect = pygame.Rect(self.x, self.y, self.width, self.height)  # Bullet rectangle
         return bullet_rect.colliderect(alien_rect)  # Check collision
+
+
 
 class Explosion:
     def __init__(self, x, y):
@@ -303,15 +370,25 @@ while running:
                     powerups.append(PowerUp(alien[0], alien[1])) # spawning when alien dies
                 break  # Exit loop once collision is detected
 
+        # Check for collision with zigzag aliens
+
+            for zigzag in zigzag_aliens[:]:
+                for bullet in bullets[:]:
+                    if zigzag[0] < bullet.x < zigzag[0] + 44 and zigzag[1] < bullet.y < zigzag[1] + 44:
+                        bullets.remove(bullet)  # Remove the bullet
+                        zigzag_aliens.remove(zigzag)  # Remove the zigzag alien
+                        spawn_aliens(random.randint(0, 2))  # Spawn new aliens based on game logic
+
     # Move aliens downward and spawn new ones when they move off the screen
     for alien in aliens[:]:
         alien[1] += alien[2]  # Move each alien down based on its speed
 
+
         # Alien shooting logic
         alien[3] -= 1  # Decrease the shoot timer
-        if alien[3] <= 0:  # Time to shoot
+        if alien[3] <= 1:
             alien_bullets.append(AlienBullet(alien[0] + 22, alien[1] + 50))
-            alien[3] = random.randint(60, 180)  # Reset shoot timer (1-3 seconds)
+            alien[3] = int(1000)  # Sets shooting speed (working) set speed to make it more like a foot soldier
 
         # If alien moves off screen, remove it and spawn new ones
         if alien[1] > 600:
